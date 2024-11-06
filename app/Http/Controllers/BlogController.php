@@ -4,12 +4,23 @@ namespace App\Http\Controllers;
 
 use App\Models\Blog;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Routing\Controllers\Middleware;
+use Illuminate\Routing\Controllers\HasMiddleware;
 
-class BlogController extends Controller
+class BlogController extends Controller implements HasMiddleware
 {
     /**
      * Display a listing of the resource.
      */
+
+    public static function middleware()
+    {
+        return [
+            new Middleware('auth:sanctum', except: ['index', 'show']),
+        ];
+    }
+
     public function index()
     {
         $blogs = Blog::all();
@@ -31,7 +42,7 @@ class BlogController extends Controller
             ]
         );
 
-        $blog = Blog::create($validated);
+        $blog = $request->user()->posts()->create($validated);
 
         return [
             'message' => "Blog Created Successfully",
@@ -55,6 +66,13 @@ class BlogController extends Controller
      */
     public function update(Blog $blog, Request $request)
     {
+
+        if (! Gate::allows('modify', $blog)) {
+            return [
+                'message' => 'You are not authorized!'
+            ];
+        }
+
         $validated = $request->validate(
             [
                 'title' => 'required',
@@ -65,7 +83,8 @@ class BlogController extends Controller
         $blog->update($validated);
 
         return [
-            'Blog' => $blog
+            'message' => 'Blog Updated Successfully!',
+            'blog' => $blog
         ];
     }
 
@@ -74,6 +93,11 @@ class BlogController extends Controller
      */
     public function destroy(Blog $blog)
     {
+        if (! Gate::allows('modify', $blog)) {
+            return [
+                'message' => 'You are not authorized!'
+            ];
+        }
 
         $blog->delete();
 

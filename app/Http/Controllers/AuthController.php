@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
 {
@@ -13,27 +14,54 @@ class AuthController extends Controller
             [
                 'name' => 'required',
                 'email' => 'required|unique:users,email',
-                'password' => 'require|confirmed',
+                'password' => 'required|confirmed',
             ]
         );
 
         $user = User::create($validated);
 
-        $token = $request->user()->createToken($request->token_name);
+        $token = $user->createToken($request->name);
 
         return [
+            'message' => 'Registerd successfully!',
             'user' => $user,
-            'token' => $token->plainText
+            'token' =>  $token->plainTextToken
         ];
     }
 
-    public function login()
+    public function login(Request $request)
     {
-        return 'login';
+        $validated = $request->validate(
+            [
+                'email' => 'required|exists:users,email',
+                'password' => 'required',
+            ]
+        );
+
+        $user = User::where('email', $request->email)->first();
+
+        // return $user;
+
+        if (!$user || !Hash::check($request->password, $user->password)) {
+            return [
+                'message' => 'Credentials failed'
+            ];
+        }
+
+        $token = $user->createToken($request->email);
+
+        return [
+            'message' => 'Login succesfully!',
+            'token' => $token->plainTextToken
+        ];
     }
 
-    public function logout()
+    public function logout(Request $request)
     {
-        return 'logout';
+        $request->user()->tokens()->delete();
+
+        return [
+            'message' => "Logout successfully!"
+        ];
     }
 }
